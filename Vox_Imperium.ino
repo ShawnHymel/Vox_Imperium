@@ -23,17 +23,17 @@ AudioConnection          patchCord7(mixer1, dac1);
 
 // Parameters
 const bool DEBUG = false;
-const bool ADD_BREAK = true;
-const bool ADD_CLICK = true;
+const bool BEGIN_CLICK = true;  // Play click on voice start
+const bool END_SOUND = true;    // Play click/burst on voice end
 const bool FEEDBACK_SUPPRESSION = false;  // Enables input filter
 const unsigned int LOWPASS_CUTOFF = 2200; // Hz
 const unsigned int CROSSOVER_FREQ = 2000; // Filter center freq
 const float BASS_GAIN_ON = 0.01;
 const float BASS_GAIN_OFF = 0.0;
-const float TREBLE_GAIN_ON = 0.25;    // Voice volume
+const float TREBLE_GAIN_ON = 0.25;    // Voice output volume
 const float TREBLE_GAIN_OFF = 0.0;
 const float SFX_GAIN = 0.5;           // Sound clip volume
-const float SQUELCH_CUTOFF = 0.10;    // Volume level
+const float SQUELCH_CUTOFF = 0.10;    // Voice threshold
 const int HYSTERESIS_TIME_ON = 20;    // Milliseconds
 const int HYSTERESIS_TIME_OFF = 400;  // Milliseconds
 
@@ -57,7 +57,7 @@ unsigned long timer;
 void setup() {
   
   if ( DEBUG ) {
-    Serial.begin( 9600 );
+    Serial.begin(9600);
   }
 
   // Initialize amplifier
@@ -68,7 +68,9 @@ void setup() {
 
   // wait up to 10 seconds for Arduino Serial Monitor
   unsigned long startMillis = millis();
-  while ( !Serial && ( millis() - startMillis < 10000 ) );
+  if ( DEBUG ) {
+    while ( !Serial && ( millis() - startMillis < 10000 ) );
+  }
 
   // Butterworth lowpass filter (reduces audio feedback)
   if ( FEEDBACK_SUPPRESSION ) {
@@ -92,7 +94,16 @@ void setup() {
       Serial.println( "Unable to access SPI Flash chip" );
     }
   }
-  
+
+  // Use the time since boot as a seed (I know, not great, but
+  // the audio toolbox took away my analogRead)
+  int seed = micros() % 32767;
+  if ( DEBUG ) {
+    Serial.print("Seed: ");
+    Serial.println(seed);
+  }
+  randomSeed(seed);
+
   if ( DEBUG ) {
     Serial.println("Finished init");
   }
@@ -113,7 +124,7 @@ void loop() {
         }
         break;
 
-      // If sound continues, play break
+      // If sound continues, play sound effect
       case QUIET_TO_LOUD:
         if ( peak1.read() <= SQUELCH_CUTOFF ) {
           state = QUIET;
@@ -126,8 +137,8 @@ void loop() {
 
             // Turn on amp, play sound, turn on mic
             digitalWrite(AMP_ENABLE, HIGH);
-            if ( ADD_BREAK ) {
-              playFile("break.raw");
+            if ( BEGIN_CLICK ) {
+              playFile("click.raw");
             }
             mixer1.gain(0, BASS_GAIN_ON);
             mixer1.gain(1, TREBLE_GAIN_ON);
@@ -146,7 +157,7 @@ void loop() {
         }
         break;
 
-      // If no sound for a time, play click
+      // If no sound for a time, play click or burst
       case LOUD_TO_QUIET:
         if ( peak1.read() > SQUELCH_CUTOFF ) {
           state = LOUD;
@@ -157,10 +168,16 @@ void loop() {
               Serial.println("OFF");
             }
 
-            // Play sound, turn off amp and mic
-            if ( ADD_CLICK ) {
-              playFile("click.raw");
+            // Play a random sound
+            if ( END_SOUND ) {
+              if ( random(2) ) {
+                playFile("click.raw");
+              } else {
+                playFile("break.raw");
+              }
             }
+
+            // Turn off mic and amp
             digitalWrite(AMP_ENABLE, LOW);
             mixer1.gain(0, BASS_GAIN_OFF);
             mixer1.gain(1, TREBLE_GAIN_OFF);
