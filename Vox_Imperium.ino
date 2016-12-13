@@ -23,16 +23,16 @@ AudioConnection          patchCord7(mixer1, dac1);
 
 // Parameters
 const bool DEBUG = false;
-const bool BEGIN_CLICK = true;  // Play click on voice start
+const bool BEGIN_CLICK = false;  // Play click on voice start
 const bool END_SOUND = true;    // Play click/burst on voice end
 const bool FEEDBACK_SUPPRESSION = false;  // Enables input filter
 const unsigned int LOWPASS_CUTOFF = 2200; // Hz
 const unsigned int CROSSOVER_FREQ = 2000; // Filter center freq
-const float BASS_GAIN_ON = 0.01;
+const float BASS_GAIN_ON = 0.3;
 const float BASS_GAIN_OFF = 0.0;
-const float TREBLE_GAIN_ON = 0.25;    // Voice output volume
+const float TREBLE_GAIN_ON = 0.4;    // Voice output volume
 const float TREBLE_GAIN_OFF = 0.0;
-const float SFX_GAIN = 0.5;           // Sound clip volume
+const float SFX_GAIN = 0.1;           // Sound clip volume
 const float SQUELCH_CUTOFF = 0.10;    // Voice threshold
 const int HYSTERESIS_TIME_ON = 20;    // Milliseconds
 const int HYSTERESIS_TIME_OFF = 400;  // Milliseconds
